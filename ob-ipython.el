@@ -114,12 +114,17 @@
 
 ;;; process management
 
+(defun ob-ipython--locate-python (pycmd)
+  (if python-shell-virtualenv-path
+      (expand-file-name (concat "bin/" pycmd) python-shell-virtualenv-path)
+    (executable-find pycmd)))
+
 (defun ob-ipython--kernel-cmd (name)
-  (-concat (list "ipython" "kernel" (format "--IPKernelApp.connection_file=emacs-%s.json" name))
+  (-concat (list (ob-ipython--locate-python "ipython") "kernel" (format "--IPKernelApp.connection_file=emacs-%s.json" name))
            ob-ipython-kernel-extra-args))
 
 (defun ob-ipython--kernel-repl-cmd (name)
-  (list "ipython" "console" "--existing" (format "emacs-%s.json" name)))
+  (list (ob-ipython--locate-python "ipython") "console" "--existing" (format "emacs-%s.json" name)))
 
 (defun ob-ipython--create-process (name cmd)
   (apply 'start-process name (format "*ob-ipython-%s*" name) (car cmd) (cdr cmd)))
@@ -140,8 +145,7 @@
 (defun ob-ipython--create-driver ()
   (when (not (process-live-p (ob-ipython--get-driver-process)))
     (ob-ipython--create-process "ob-ipython-driver"
-                                (list (locate-file (if (eq system-type 'windows-nt) "python.exe" "python")
-                                                   exec-path)
+                                (list (ob-ipython--locate-python (if (eq system-type 'windows-nt) "python.exe" "python"))
                                       ob-ipython-driver-path
                                       (number-to-string ob-ipython-driver-port)))
     ;; give driver a chance to bind to a port and start serving
